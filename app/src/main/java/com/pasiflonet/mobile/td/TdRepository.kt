@@ -44,7 +44,6 @@ class TdRepository(
 
     private var client: TdClient? = null
 
-    // cache
     private val chatCache = ConcurrentHashMap<Long, TdApi.Chat>()
     private val lastMsgCache = ConcurrentHashMap<Long, TdApi.Message>()
 
@@ -63,7 +62,6 @@ class TdRepository(
                             is TdApi.UpdateAuthorizationState -> handleAuth(obj.authorizationState)
                             is TdApi.UpdateNewMessage -> handleNewMessage(obj.message)
                             is TdApi.UpdateChatLastMessage -> {
-                                // lastMessage מגיע כ-Message
                                 obj.lastMessage?.let { m ->
                                     lastMsgCache[obj.chatId] = m
                                     rebuildSources()
@@ -75,11 +73,9 @@ class TdRepository(
                                     rebuildSources()
                                 }
                             }
-                            is TdApi.UpdateChatPhoto -> {
-                                // לא חובה עכשיו — נשאיר
-                            }
                             is TdApi.UpdateNewChat -> {
                                 chatCache[obj.chat.id] = obj.chat
+                                obj.chat.lastMessage?.let { lastMsgCache[obj.chat.id] = it }
                                 rebuildSources()
                             }
                         }
@@ -105,7 +101,6 @@ class TdRepository(
         when (state) {
             is TdApi.AuthorizationStateReady -> {
                 _loggedIn.value = true
-                // ברגע שמוכן — טוענים מקורות (כל הצ׳אטים)
                 scope.launch {
                     try {
                         loadAllSources()
@@ -115,18 +110,14 @@ class TdRepository(
                     }
                 }
             }
-            else -> {
-                _loggedIn.value = false
-            }
+            else -> _loggedIn.value = false
         }
     }
 
     private fun handleNewMessage(m: TdApi.Message) {
-        // תמיד מעדכן last message לכל צ׳אט
         lastMsgCache[m.chatId] = m
         rebuildSources()
 
-        // אם פתוח צ׳אט פעיל — מכניס לראש רשימת הודעות בלייב
         val active = _activeChatId.value
         if (active != null && active == m.chatId) {
             val cur = _messages.value
@@ -148,7 +139,6 @@ class TdRepository(
     }
 
     private fun rebuildSources() {
-        // הופכים Cache לרשימת “מקורות”
         val rows = chatCache.values.map { chat ->
             val last = lastMsgCache[chat.id]
             SourceRow(
@@ -160,7 +150,6 @@ class TdRepository(
         }.sortedWith(
             compareByDescending<SourceRow> { it.lastMessageId }.thenBy { it.title.lowercase() }
         )
-
         _sources.value = rows
     }
 
@@ -172,7 +161,6 @@ class TdRepository(
     suspend fun sendPhone(phone: String) {
         prefs.setPhone(phone)
         val c = ensureClient()
-        // חשוב: TDLib אוהב settings; אם null עובד אצלך נשאיר null כדי לא לשבור
         c.send(TdApi.SetAuthenticationPhoneNumber(phone, null))
         _status.value = "Phone sent, waiting for code"
     }
@@ -193,28 +181,15 @@ class TdRepository(
         val c = ensureClient()
         _status.value = "Loading sources…"
 
-        var offsetOrder = Long.MAX_VALUE
-        var offsetChatId = 0L
-        var total = 0
-
-        while (total < limitHard) {
-            val res = kotlinx.coroutines.suspendCancellableCoroutine<TdApi.Object> { cont ->
-                c.send(TdApi.GetChats(offsetOrder, offsetChatId, 200)) { obj ->
-                    if (!cont.isCompleted) cont.resume(obj) {}
-                }
+        // שלב ראשון – מביא 200 צ׳אטים, ובמקביל updates ימלאו עוד (מספיק לרוב המשתמשים)
+        val res = kotlinx.coroutines.suspendCancellableCoroutine<TdApi.Object> { cont ->
+            c.send(TdApi.GetChats(Long.MAX_VALUE, 0L, 200)) { obj ->
+                if (!cont.isCompleted) cont.resume(obj) {}
             }
-
-            if (res !is TdApi.Chats) {
-                Log.e("TdRepository", "GetChats unexpected: ${res.javaClass.simpleName}")
-                break
-            }
-
+        }
+        if (res is TdApi.Chats) {
             val ids = res.chatIds ?: longArrayOf()
-            if (ids.isEmpty()) break
-
-            // נביא פרטי צ׳אט כדי לקבל title + lastMessage (דרך Update/או GetChat)
             ids.forEach { chatId ->
-                total++
                 c.send(TdApi.GetChat(chatId)) { obj ->
                     if (obj is TdApi.Chat) {
                         chatCache[obj.id] = obj
@@ -223,18 +198,6 @@ class TdRepository(
                     }
                 }
             }
-
-            // TDLib pagination: נשתמש בצ׳אט האחרון כ-offset
-            // offsetOrder = lastChat.order ; offsetChatId = lastChat.id
-            // אבל order נמצא ב-Chat.positions; כדי לא להסתבך — נזוז “בקפיצות” ע״י GetChats חוזר עם offset מקסימלי,
-            // ואם לא נצליח — נסתפק במה שחזר. זה עדיין מביא את רוב המקורות אצל רוב המשתמשים.
-            // (בלי לשבור קומפילציה לפי שדות שונים בין גרסאות)
-
-            // fallback: עצירה כשכבר יש הרבה
-            if (total >= limitHard) break
-            if (total >= 800) break
-            // ננסה עוד סיבוב, אבל בלי offset אמיתי; TDLib עדיין מחזיר עדכון “מקורות” דרך updates לאחר התחברות
-            break
         }
 
         _status.value = "Sources loaded: ${_sources.value.size}"
@@ -245,7 +208,6 @@ class TdRepository(
         _activeChatId.value = chatId
         _messages.value = emptyList()
         c.send(TdApi.OpenChat(chatId))
-        // טוענים היסטוריה ראשונית
         loadHistory(chatId, 0L, 50)
     }
 
@@ -258,7 +220,6 @@ class TdRepository(
         }
         if (res is TdApi.Messages) {
             val list = (res.messages ?: arrayOf()).toList()
-            // TDLib מחזיר מהחדש לישן או להפך לפי fromMessageId; ננרמל לחדש למעלה:
             val normalized = list.sortedByDescending { it.id }
             _messages.value = (normalized + _messages.value).distinctBy { it.id }.take(200)
         }

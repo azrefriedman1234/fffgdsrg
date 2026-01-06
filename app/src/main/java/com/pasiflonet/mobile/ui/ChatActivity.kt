@@ -18,10 +18,7 @@ class ChatActivity : AppCompatActivity() {
         setContentView(b.root)
 
         val chatId = intent.getLongExtra("chatId", 0L)
-        if (chatId == 0L) {
-            finish()
-            return
-        }
+        if (chatId == 0L) { finish(); return }
 
         b.recyclerView.layoutManager = LinearLayoutManager(this)
         b.recyclerView.adapter = msgAdapter

@@ -30,6 +30,6 @@ class SourcesAdapter(
         val it = items[position]
         holder.b.tvTitle.text = it.title
         holder.b.tvSub.text = it.lastMessageSummary
-        holder.b.root.setOnClickListener { _ -> onClick(it.chatId) }
+        holder.b.root.setOnClickListener { onClick(it.chatId) }
     }
 }

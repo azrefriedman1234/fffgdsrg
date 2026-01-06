@@ -24,7 +24,6 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, ChatActivity::class.java).putExtra("chatId", chatId))
         }
 
-        // מחבר RecyclerView גם אם שם השדה בביינדינג שונה – נופל ל-findViewById ע״פ id
         val rv = findRecycler()
         rv.layoutManager = LinearLayoutManager(this)
         rv.adapter = adapter
@@ -38,13 +37,6 @@ class MainActivity : AppCompatActivity() {
                 adapter.submit(list)
             }
         }
-
-        lifecycleScope.launch {
-            repo.status.collect { s ->
-                // אם יש לך TextView סטטוס – ננסה לעדכן, ואם לא אז לא נפריע
-                trySetTextById("tvStatus", s)
-            }
-        }
     }
 
     private fun findRecycler(): androidx.recyclerview.widget.RecyclerView {
@@ -56,17 +48,7 @@ class MainActivity : AppCompatActivity() {
                 if (v is androidx.recyclerview.widget.RecyclerView) return v
             }
         }
-        // אם לא מצא – ננסה דרך הביינדינג (השכיח)
         return b.recyclerView
-    }
-
-    private fun trySetTextById(idName: String, text: String) {
-        val id = resources.getIdentifier(idName, "id", packageName)
-        if (id == 0) return
-        val v = findViewById<View>(id) ?: return
-        try {
-            v.javaClass.getMethod("setText", CharSequence::class.java).invoke(v, text)
-        } catch (_: Throwable) {}
     }
 
     private fun wireSettingsButton() {
