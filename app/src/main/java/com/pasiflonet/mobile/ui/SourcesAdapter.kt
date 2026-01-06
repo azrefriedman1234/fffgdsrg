@@ -1,43 +1,35 @@
 package com.pasiflonet.mobile.ui
 
+import android.view.LayoutInflater
 import android.view.ViewGroup
-import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
+import com.pasiflonet.mobile.databinding.RowSourceBinding
+import com.pasiflonet.mobile.td.SourceRow
 
 class SourcesAdapter(
-    private val onClick: (SourceRow) -> Unit
+    private val onClick: (Long) -> Unit
 ) : RecyclerView.Adapter<SourcesAdapter.VH>() {
 
-    private val items = mutableListOf<SourceRow>()
+    private var items: List<SourceRow> = emptyList()
 
     fun submit(list: List<SourceRow>) {
-        items.clear()
-        items.addAll(list)
+        items = list
         notifyDataSetChanged()
     }
 
+    class VH(val b: RowSourceBinding) : RecyclerView.ViewHolder(b.root)
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
-        val tv = TextView(parent.context).apply {
-            textSize = 16f
-            setPadding(24, 20, 24, 20)
-            layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            )
-        }
-        return VH(tv, onClick)
+        val b = RowSourceBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+        return VH(b)
     }
 
-    override fun onBindViewHolder(holder: VH, position: Int) = holder.bind(items[position])
     override fun getItemCount(): Int = items.size
 
-    class VH(
-        private val tv: TextView,
-        private val onClick: (SourceRow) -> Unit
-    ) : RecyclerView.ViewHolder(tv) {
-        fun bind(item: SourceRow) {
-            tv.text = item.title
-            tv.setOnClickListener { onClick(item) }
-        }
+    override fun onBindViewHolder(holder: VH, position: Int) {
+        val it = items[position]
+        holder.b.tvTitle.text = it.title
+        holder.b.tvSub.text = it.lastMessageSummary
+        holder.b.root.setOnClickListener { _ -> onClick(it.chatId) }
     }
 }

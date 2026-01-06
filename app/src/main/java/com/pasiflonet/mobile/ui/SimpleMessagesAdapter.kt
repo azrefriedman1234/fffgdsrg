@@ -25,7 +25,14 @@ class SimpleMessagesAdapter : RecyclerView.Adapter<SimpleMessagesAdapter.VH>() {
 
     override fun onBindViewHolder(holder: VH, position: Int) {
         val m = items[position]
-        holder.b.tvLine1.text = "msgId=${m.id} chatId=${m.chatId}"
-        holder.b.tvLine2.text = m.content.javaClass.simpleName
+        holder.b.tvLine1.text = "msgId=${m.id}  chatId=${m.chatId}"
+        val c = m.content
+        holder.b.tvLine2.text = when (c) {
+            is TdApi.MessageText -> c.text?.text ?: "טקסט"
+            is TdApi.MessagePhoto -> "🖼️ תמונה"
+            is TdApi.MessageVideo -> "🎬 וידאו"
+            is TdApi.MessageDocument -> "📎 קובץ"
+            else -> c.javaClass.simpleName
+        }
     }
 }

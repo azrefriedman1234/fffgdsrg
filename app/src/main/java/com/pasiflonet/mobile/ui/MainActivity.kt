@@ -2,128 +2,86 @@ package com.pasiflonet.mobile.ui
 
 import android.content.Intent
 import android.os.Bundle
-import androidx.activity.viewModels
+import android.view.View
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.pasiflonet.mobile.databinding.ActivityMainBinding
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.launch
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
-    private val msgAdapter = SimpleMessagesAdapter()
-
     private lateinit var b: ActivityMainBinding
-    private val vm: MainViewModel by viewModels()
+    private lateinit var adapter: SourcesAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         b = ActivityMainBinding.inflate(layoutInflater)
         setContentView(b.root)
 
-        b.recyclerView.layoutManager = LinearLayoutManager(this)
-        b.recyclerView.adapter = msgAdapter
+        title = "מקורות"
 
-        
-        observeAuthAndRoute()
-
-        val repo = AppGraph.tdRepository(this)
-        lifecycleScope.launch {
-            repo.messages.collect { list ->
-                msgAdapter.submit(list)
-            }
+        adapter = SourcesAdapter { chatId ->
+            startActivity(Intent(this, ChatActivity::class.java).putExtra("chatId", chatId))
         }
-title = "מקורות"
 
-        wireSettingsButton() // גם אם יש overlay
-        setupSourcesList()
-
-        // טען מקורות ישר בפתיחה (אם כבר מחובר)
-        vm.refreshSources()
-    }
-
-    private fun setupSourcesList() {
+        // מחבר RecyclerView גם אם שם השדה בביינדינג שונה – נופל ל-findViewById ע״פ id
         val rv = findRecycler()
-        if (rv == null) return
-
-        val adapter = SourcesAdapter { row ->
-            // כרגע רק placeholder לכניסה למקור
-            android.widget.Toast.makeText(this, "נבחר מקור: ${row.title}", android.widget.Toast.LENGTH_SHORT).show()
-        }
-
         rv.layoutManager = LinearLayoutManager(this)
         rv.adapter = adapter
 
+        wireSettingsButton()
+
+        val repo = AppGraph.tdRepository(this)
+
         lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                launch {
-                    vm.sources.collect { list ->
-                        adapter.submit(list)
-                    }
-                }
-                launch {
-                    vm.status.collect { s ->
-                        // אם יש לך TextView סטטוס בעתיד – אפשר לשים כאן
-                        android.util.Log.d("MainActivity", "status: $s")
-                    }
-                }
+            repo.sources.collect { list ->
+                adapter.submit(list)
+            }
+        }
+
+        lifecycleScope.launch {
+            repo.status.collect { s ->
+                // אם יש לך TextView סטטוס – ננסה לעדכן, ואם לא אז לא נפריע
+                trySetTextById("tvStatus", s)
             }
         }
     }
 
-    private fun findRecycler(): RecyclerView? {
-        val ids = listOf("rvSources", "rvChats", "recycler", "recyclerView", "rv", "list")
-        val v = ids.firstNotNullOfOrNull { name ->
+    private fun findRecycler(): androidx.recyclerview.widget.RecyclerView {
+        val candidates = listOf("recyclerView", "rvSources", "rvChats", "rv")
+        for (name in candidates) {
             val id = resources.getIdentifier(name, "id", packageName)
-            if (id != 0) findViewById<RecyclerView?>(id) else null
+            if (id != 0) {
+                val v = findViewById<View>(id)
+                if (v is androidx.recyclerview.widget.RecyclerView) return v
+            }
         }
-        if (v == null) {
-            android.util.Log.w("MainActivity", "RecyclerView not found by common IDs")
-        }
-        return v
+        // אם לא מצא – ננסה דרך הביינדינג (השכיח)
+        return b.recyclerView
+    }
+
+    private fun trySetTextById(idName: String, text: String) {
+        val id = resources.getIdentifier(idName, "id", packageName)
+        if (id == 0) return
+        val v = findViewById<View>(id) ?: return
+        try {
+            v.javaClass.getMethod("setText", CharSequence::class.java).invoke(v, text)
+        } catch (_: Throwable) {}
     }
 
     private fun wireSettingsButton() {
-        val ids = listOf("btnSettings", "buttonSettings", "ivSettings", "imgSettings", "settings")
+        val ids = listOf("btnSettings","buttonSettings","ivSettings","imgSettings","settings")
         val v = ids.firstNotNullOfOrNull { name ->
             val id = resources.getIdentifier(name, "id", packageName)
-            if (id != 0) findViewById<android.view.View?>(id) else null
-        }
+            if (id != 0) findViewById<View?>(id) else null
+        } ?: return
 
-        if (v == null) {
-            android.util.Log.w("MainActivity", "Settings button not found in layout")
-            return
-        }
-
-        // קריטי נגד overlay:
-        v.bringToFront()
         v.isEnabled = true
         v.isClickable = true
         v.isFocusable = true
 
         v.setOnClickListener {
-            android.widget.Toast.makeText(this, "פותח הגדרות…", android.widget.Toast.LENGTH_SHORT).show()
             startActivity(Intent(this, SettingsActivity::class.java))
         }
     }
-
-    private fun observeAuthAndRoute() {
-        val repo = AppGraph.tdRepository(this)
-        lifecycleScope.launch {
-            repo.loggedIn.collect { ok ->
-                if (!ok) {
-                    startActivity(Intent(this@MainActivity, LoginActivity::class.java))
-                    finish()
-                }
-            }
-        }
-    }
-
 }
