@@ -9,3 +9,7 @@ local.properties
 *.jks
 *.keystore
 app/libs/*.aar.sha256
+
+# local AARs
+app/libs/
+
