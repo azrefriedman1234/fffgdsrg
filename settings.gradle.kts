@@ -7,14 +7,18 @@ pluginManagement {
 }
 
 dependencyResolutionManagement {
+    // We keep CI clean: no module-level repositories.
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         google()
         mavenCentral()
-        // בשביל TDLib AAR מקומי
-        flatDir { dirs("app/libs") }
+
+        // Local AARs (TDLib) live under app/libs
+        flatDir {
+            dirs("app/libs")
+        }
     }
 }
 
-rootProject.name = "fffgdsrg"
+rootProject.name = "PasiflonetMobile"
 include(":app")
