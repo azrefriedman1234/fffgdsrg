@@ -10,86 +10,87 @@
         android:padding="16dp">
 
         <TextView
+            android:id="@+id/tvStatus"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Telegram API (my.telegram.org)"
-            android:textStyle="bold" />
+            android:text="Status"
+            android:textSize="16sp"
+            android:paddingBottom="12dp"/>
 
         <EditText
             android:id="@+id/etApiId"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="API ID (מספר)"
+            android:hint="Telegram API ID"
             android:inputType="number" />
 
         <EditText
             android:id="@+id/etApiHash"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="API HASH"
-            android:inputType="textPassword" />
+            android:hint="Telegram API HASH"
+            android:inputType="text"
+            android:autofillHints="" />
 
         <Button
             android:id="@+id/btnSaveApi"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="שמור API" />
+            android:text="שמור API (והפעל TDLib)"/>
 
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="16dp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Login"
-            android:textStyle="bold" />
+        <View android:layout_width="match_parent" android:layout_height="12dp"/>
 
         <EditText
             android:id="@+id/etPhone"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="טלפון (+972...)"
+            android:hint="Phone (+972...)"
             android:inputType="phone" />
 
         <Button
             android:id="@+id/btnSendPhone"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="שלח טלפון (קבל קוד)" />
+            android:text="שלח טלפון"/>
+
+        <View android:layout_width="match_parent" android:layout_height="12dp"/>
 
         <EditText
             android:id="@+id/etCode"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="קוד SMS"
+            android:hint="Code"
             android:inputType="number" />
 
         <Button
             android:id="@+id/btnSendCode"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="שלח קוד" />
+            android:text="שלח קוד"/>
+
+        <View android:layout_width="match_parent" android:layout_height="12dp"/>
 
         <EditText
             android:id="@+id/etPassword"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="סיסמת 2FA (אם יש)"
+            android:hint="Password (if needed)"
             android:inputType="textPassword" />
 
         <Button
             android:id="@+id/btnSendPassword"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="שלח סיסמה" />
+            android:text="שלח סיסמה"/>
 
-        <TextView
-            android:id="@+id/tvStatus"
+        <View android:layout_width="match_parent" android:layout_height="18dp"/>
+
+        <Button
+            android:id="@+id/btnContinue"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="סטטוס: מוכן"
-            android:paddingTop="12dp" />
+            android:text="התחבר (המשך למסך הראשי)"
+            android:enabled="false"/>
 
     </LinearLayout>
 </ScrollView>

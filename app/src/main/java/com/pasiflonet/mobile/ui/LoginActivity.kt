@@ -1,5 +1,6 @@
 package com.pasiflonet.mobile.ui
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -17,26 +18,43 @@ class LoginActivity : AppCompatActivity() {
         setContentView(b.root)
 
         b.btnSaveApi.setOnClickListener {
-            val id = b.etApiId.text?.toString()?.trim()?.toIntOrNull() ?: 0
-            val hash = b.etApiHash.text?.toString()?.trim().orEmpty()
-            vm.saveApi(id, hash)
+            vm.saveApiAndInit(
+                apiIdStr = b.etApiId.text?.toString() ?: "",
+                apiHashStr = b.etApiHash.text?.toString() ?: ""
+            )
         }
 
         b.btnSendPhone.setOnClickListener {
-            vm.sendPhone(b.etPhone.text?.toString()?.trim().orEmpty())
+            vm.sendPhone(b.etPhone.text?.toString() ?: "")
         }
 
         b.btnSendCode.setOnClickListener {
-            vm.sendCode(b.etCode.text?.toString()?.trim().orEmpty())
+            vm.sendCode(b.etCode.text?.toString() ?: "")
         }
 
         b.btnSendPassword.setOnClickListener {
-            vm.sendPassword(b.etPassword.text?.toString()?.trim().orEmpty())
+            vm.sendPassword(b.etPassword.text?.toString() ?: "")
+        }
+
+        b.btnContinue.setOnClickListener {
+            startActivity(Intent(this, MainActivity::class.java))
+            finish()
         }
 
         lifecycleScope.launch {
-            vm.status.collect { s ->
-                b.tvStatus.text = "סטטוס: $s"
+            vm.state.collect { st ->
+                b.tvStatus.text = st.status
+
+                // טען ערכים שמורים לתוך השדות אם ריקים (לא לדרוס הקלדה)
+                if (b.etApiId.text.isNullOrEmpty() && st.savedApiId.isNotBlank()) b.etApiId.setText(st.savedApiId)
+                if (b.etApiHash.text.isNullOrEmpty() && st.savedApiHash.isNotBlank()) b.etApiHash.setText(st.savedApiHash)
+                if (b.etPhone.text.isNullOrEmpty() && st.savedPhone.isNotBlank()) b.etPhone.setText(st.savedPhone)
+
+                // הפעלות כפתורים לפי שלב
+                b.btnSendPhone.isEnabled = st.step == LoginUiState.Step.NEED_PHONE
+                b.btnSendCode.isEnabled = st.step == LoginUiState.Step.NEED_CODE
+                b.btnSendPassword.isEnabled = st.step == LoginUiState.Step.NEED_PASSWORD
+                b.btnContinue.isEnabled = st.ready
             }
         }
     }
