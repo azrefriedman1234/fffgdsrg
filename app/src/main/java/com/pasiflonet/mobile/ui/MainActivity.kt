@@ -1,65 +1,78 @@
 package com.pasiflonet.mobile.ui
 
-import android.os.Bundle
-import android.view.View
 import android.content.Intent
+import android.os.Bundle
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.pasiflonet.mobile.databinding.ActivityMainBinding
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
     private lateinit var b: ActivityMainBinding
+    private val vm: MainViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         b = ActivityMainBinding.inflate(layoutInflater)
         setContentView(b.root)
-        
-        // 🔧 ensure Settings button always works (even if ID changes)
-        wireSettingsButton()
-// Placeholder – UI wiring later
+
+        title = "מקורות"
+
+        wireSettingsButton() // גם אם יש overlay
+        setupSourcesList()
+
+        // טען מקורות ישר בפתיחה (אם כבר מחובר)
+        vm.refreshSources()
     }
 
-    private fun wireSettingsButtonAuto() {
-        // Try common IDs. Works even if you use viewBinding or findViewById.
-        val candidates = listOf(
-            "btnSettings", "buttonSettings", "ivSettings", "imgSettings", "settings",
-            "btnConfig", "buttonConfig"
-        )
+    private fun setupSourcesList() {
+        val rv = findRecycler()
+        if (rv == null) return
 
-        for (name in candidates) {
-            val id = resources.getIdentifier(name, "id", packageName)
-            if (id != 0) {
-                val v = findViewById<View>(id)
-                v?.setOnClickListener {
-                    startActivity(Intent(this, SettingsActivity::class.java))
+        val adapter = SourcesAdapter { row ->
+            // כרגע רק placeholder לכניסה למקור
+            android.widget.Toast.makeText(this, "נבחר מקור: ${row.title}", android.widget.Toast.LENGTH_SHORT).show()
+        }
+
+        rv.layoutManager = LinearLayoutManager(this)
+        rv.adapter = adapter
+
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch {
+                    vm.sources.collect { list ->
+                        adapter.submit(list)
+                    }
+                }
+                launch {
+                    vm.status.collect { s ->
+                        // אם יש לך TextView סטטוס בעתיד – אפשר לשים כאן
+                        android.util.Log.d("MainActivity", "status: $s")
+                    }
                 }
             }
         }
     }
 
-    private fun forceSourcesTitleIfChats() {
-        // If some view/toolbar title still says "צאטים", force it to "מקורות"
-        val titleCandidates = listOf("tvTitle", "tvChatsTitle", "toolbarTitle", "title")
-        for (name in titleCandidates) {
+    private fun findRecycler(): RecyclerView? {
+        val ids = listOf("rvSources", "rvChats", "recycler", "recyclerView", "rv", "list")
+        val v = ids.firstNotNullOfOrNull { name ->
             val id = resources.getIdentifier(name, "id", packageName)
-            if (id != 0) {
-                val v = findViewById<View>(id)
-                try {
-                    val m = v?.javaClass?.getMethod("getText")
-                    val cur = m?.invoke(v)?.toString() ?: ""
-                    if (cur.trim() == "צאטים") {
-                        v.javaClass.getMethod("setText", CharSequence::class.java).invoke(v, "מקורות")
-                    }
-                } catch (_: Throwable) {}
-            }
+            if (id != 0) findViewById<RecyclerView?>(id) else null
         }
-        // Also set activity title (toolbar)
-        if (title?.toString()?.trim() == "צאטים") title = "מקורות"
+        if (v == null) {
+            android.util.Log.w("MainActivity", "RecyclerView not found by common IDs")
+        }
+        return v
     }
 
-
     private fun wireSettingsButton() {
-        val ids = listOf("btnSettings","buttonSettings","ivSettings","imgSettings","settings")
+        val ids = listOf("btnSettings", "buttonSettings", "ivSettings", "imgSettings", "settings")
         val v = ids.firstNotNullOfOrNull { name ->
             val id = resources.getIdentifier(name, "id", packageName)
             if (id != 0) findViewById<android.view.View?>(id) else null
@@ -70,21 +83,15 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        // make sure it can receive touches
+        // קריטי נגד overlay:
+        v.bringToFront()
         v.isEnabled = true
         v.isClickable = true
         v.isFocusable = true
 
-        // Touch debug: אם זה לא מופיע בלוג, יש Overlay
-        v.setOnTouchListener { _, ev ->
-            android.util.Log.d("MainActivity", "Settings touch: ${'$'}{ev.action}")
-            false
-        }
-
         v.setOnClickListener {
             android.widget.Toast.makeText(this, "פותח הגדרות…", android.widget.Toast.LENGTH_SHORT).show()
-            startActivity(android.content.Intent(this, SettingsActivity::class.java))
+            startActivity(Intent(this, SettingsActivity::class.java))
         }
     }
-
 }

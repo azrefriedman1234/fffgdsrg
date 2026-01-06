@@ -3,11 +3,15 @@ package com.pasiflonet.mobile.td
 import android.content.Context
 import android.util.Log
 import com.pasiflonet.mobile.data.AppPrefs
+import com.pasiflonet.mobile.ui.SourceRow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.suspendCancellableCoroutine
 import org.drinkless.tdlib.TdApi
 import java.io.File
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 class TdRepository(
     private val ctx: Context,
@@ -15,6 +19,9 @@ class TdRepository(
 ) {
     private val _status = MutableStateFlow("Not started")
     val status: StateFlow<String> = _status
+
+    private val _sources = MutableStateFlow<List<SourceRow>>(emptyList())
+    val sources: StateFlow<List<SourceRow>> = _sources
 
     private var client: TdClient? = null
 
@@ -28,6 +35,7 @@ class TdRepository(
         if (client == null) {
             client = TdClient(ctx, apiId, apiHash).also { c ->
                 c.onUpdate = { obj ->
+                    Log.d("TD", "update: ${obj.javaClass.simpleName}")
                     when (obj) {
                         is TdApi.UpdateAuthorizationState -> handleAuth(obj.authorizationState)
                     }
@@ -69,5 +77,40 @@ class TdRepository(
         val c = ensureClient()
         c.send(TdApi.CheckAuthenticationPassword(password))
         _status.value = "Password sent"
+    }
+
+    private suspend fun <T : TdApi.Object> await(function: TdApi.Function, expected: Class<T>): T {
+        val c = ensureClient()
+        return suspendCancellableCoroutine { cont ->
+            c.send(function) { obj ->
+                when {
+                    expected.isInstance(obj) -> cont.resume(expected.cast(obj))
+                    obj is TdApi.Error -> cont.resumeWithException(RuntimeException("TDLib error ${obj.code}: ${obj.message}"))
+                    else -> cont.resumeWithException(RuntimeException("Unexpected TDLib response: ${obj.javaClass.simpleName}"))
+                }
+            }
+        }
+    }
+
+    suspend fun loadSources(limit: Int = 80) {
+        try {
+            _status.value = "Loading sources…"
+            val chats = await(TdApi.GetChats(TdApi.ChatListMain(), limit), TdApi.Chats::class.java)
+            val out = mutableListOf<SourceRow>()
+            for (id in chats.chatIds) {
+                try {
+                    val chat = await(TdApi.GetChat(id), TdApi.Chat::class.java)
+                    val title = chat.title?.takeIf { it.isNotBlank() } ?: "Chat $id"
+                    out.add(SourceRow(id, title))
+                    _sources.value = out.toList()
+                } catch (e: Throwable) {
+                    Log.w("TdRepository", "GetChat($id) failed: ${e.message}")
+                }
+            }
+            _status.value = "Sources loaded: ${out.size}"
+        } catch (e: Throwable) {
+            Log.e("TdRepository", "loadSources failed: ${e.message}", e)
+            _status.value = "Load sources failed: ${e.message}"
+        }
     }
 }
