@@ -7,6 +7,7 @@ import com.pasiflonet.mobile.databinding.ActivitySettingsBinding
 import java.io.File
 
 class SettingsActivity : AppCompatActivity() {
+
     private lateinit var b: ActivitySettingsBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -14,68 +15,76 @@ class SettingsActivity : AppCompatActivity() {
         b = ActivitySettingsBinding.inflate(layoutInflater)
         setContentView(b.root)
 
-        b.btnClearTemp.setOnClickListener {
-            val deleted = clearTempFilesOnly()
-            Toast.makeText(this, "נמחקו $deleted קבצים זמניים", Toast.LENGTH_SHORT).show()
+        // כפתור ניקוי זמניים (לא מוחק התחברות / DataStore)
+        // אם ה-ID קיים ב-layout (הוספנו אותו), נחבר אותו.
+        runCatching {
+            b.btnClearTemp.setOnClickListener {
+                val freedBytes = clearTempFilesSafe()
+                val mb = freedBytes / (1024.0 * 1024.0)
+                Toast.makeText(
+                    this,
+                    "✅ נוקו קבצים זמניים (${String.format("%.2f", mb)}MB)",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }.onFailure {
+            // אם מסיבה כלשהי אין את ה-ID בפועל, לא נקריס את האפליקציה
         }
     }
 
     /**
-     * מנקה רק קבצים זמניים:
+     * ניקוי בטוח:
      * - cacheDir
      * - externalCacheDir
-     * - filesDir/temp , filesDir/tmp , filesDir/exports (אם קיימים)
+     * - ותיקיות temp "שלנו" בתוך filesDir
      *
-     * לא נוגע ב:
-     * - databases/
-     * - shared_prefs/
-     * - datastore/
-     * - תיקיות tdlib קבועות אם קיימות
+     * לא נוגעים ב:
+     * - DataStore / SharedPreferences / DB
+     * - קבצי התחברות
      */
-    private fun clearTempFilesOnly(): Int {
-        var count = 0
+    private fun clearTempFilesSafe(): Long {
+        var freed = 0L
 
-        fun deleteChildren(dir: File?): Int {
-            if (dir == null || !dir.exists()) return 0
-            var local = 0
-            dir.listFiles()?.forEach { f ->
-                local += deleteRecursivelySafe(f)
-            }
-            return local
+        fun sizeOf(f: File): Long {
+            if (!f.exists()) return 0L
+            if (f.isFile) return f.length()
+            val children = f.listFiles() ?: return 0L
+            var s = 0L
+            for (c in children) s += sizeOf(c)
+            return s
         }
 
-        fun safeDir(name: String): File = File(filesDir, name)
-
-        // cache dirs
-        count += deleteChildren(cacheDir)
-        count += deleteChildren(externalCacheDir)
-
-        // common temp dirs used by apps
-        count += deleteChildren(safeDir("temp"))
-        count += deleteChildren(safeDir("tmp"))
-        count += deleteChildren(safeDir("exports"))
-
-        return count
-    }
-
-    private fun deleteRecursivelySafe(f: File): Int {
-        // extra safety: never delete critical app dirs by mistake
-        val path = f.absolutePath
-        if (path.contains("/databases") || path.contains("/shared_prefs") || path.contains("/datastore")) {
-            return 0
-        }
-        // also avoid tdlib DB directories if you keep them under filesDir
-        if (path.contains("tdlib", ignoreCase = true) && (path.contains("db", ignoreCase = true) || path.contains("database", ignoreCase = true))) {
-            return 0
+        fun deleteContents(dir: File): Long {
+            if (!dir.exists() || !dir.isDirectory) return 0L
+            val before = sizeOf(dir)
+            val children = dir.listFiles() ?: emptyArray()
+            for (c in children) c.deleteRecursively()
+            val after = sizeOf(dir)
+            return (before - after).coerceAtLeast(0L)
         }
 
-        var deleted = 0
-        if (f.isDirectory) {
-            f.listFiles()?.forEach { child ->
-                deleted += deleteRecursivelySafe(child)
-            }
+        // 1) cacheDir (בטוח)
+        freed += deleteContents(cacheDir)
+
+        // 2) externalCacheDir (אם יש)
+        externalCacheDir?.let { freed += deleteContents(it) }
+
+        // 3) תיקיות זמניות ייעודיות בתוך filesDir (לא DataStore)
+        val safeTempNames = listOf(
+            "temp",
+            "tmp",
+            "exports_tmp",
+            "work_tmp",
+            "media_tmp",
+            "render_tmp",
+            "pasiflonet_tmp"
+        )
+        for (name in safeTempNames) {
+            val d = File(filesDir, name)
+            // מוחקים את התוכן בלבד, לא את התיקיה עצמה (אם קיימת)
+            freed += deleteContents(d)
         }
-        if (f.exists() && f.delete()) deleted += 1
-        return deleted
+
+        return freed
     }
 }
