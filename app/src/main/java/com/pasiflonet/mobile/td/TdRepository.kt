@@ -19,6 +19,10 @@ class TdRepository(
     private val _loggedIn = MutableStateFlow(false)
     val loggedIn: StateFlow<Boolean> = _loggedIn
 
+
+    private val _messages = MutableStateFlow<List<TdApi.Message>>(emptyList())
+    val messages: StateFlow<List<TdApi.Message>> = _messages
+
     private var client: TdClient? = null
 
     suspend fun ensureClient(): TdClient {
@@ -31,8 +35,13 @@ class TdRepository(
         if (client == null) {
             client = TdClient(ctx, apiId, apiHash).also { c ->
                 c.onUpdate = { obj ->
-                    if (obj is TdApi.UpdateAuthorizationState) {
-                        handleAuth(obj.authorizationState)
+                    when (obj) {
+                        is TdApi.UpdateAuthorizationState -> handleAuth(obj.authorizationState)
+                        is TdApi.UpdateNewMessage -> {
+                            val cur = _messages.value
+                            val next = listOf(obj.message) + cur
+                            _messages.value = next.take(120) // keep last 120
+                        }
                     }
                 }
 

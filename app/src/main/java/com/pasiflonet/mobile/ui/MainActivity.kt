@@ -10,6 +10,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.pasiflonet.mobile.databinding.ActivityMainBinding
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import androidx.lifecycle.lifecycleScope
@@ -17,6 +18,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
+    private val msgAdapter = SimpleMessagesAdapter()
+
     private lateinit var b: ActivityMainBinding
     private val vm: MainViewModel by viewModels()
 
@@ -25,8 +28,18 @@ class MainActivity : AppCompatActivity() {
         b = ActivityMainBinding.inflate(layoutInflater)
         setContentView(b.root)
 
+        b.recyclerView.layoutManager = LinearLayoutManager(this)
+        b.recyclerView.adapter = msgAdapter
+
         
         observeAuthAndRoute()
+
+        val repo = AppGraph.tdRepository(this)
+        lifecycleScope.launch {
+            repo.messages.collect { list ->
+                msgAdapter.submit(list)
+            }
+        }
 title = "מקורות"
 
         wireSettingsButton() // גם אם יש overlay
