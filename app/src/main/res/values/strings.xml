@@ -1,0 +1,39 @@
+<resources>
+    <string name="app_name">Pasiflonet Mobile</string>
+
+    <string name="login_title">התחברות לטלגרם</string>
+    <string name="phone_number">מספר טלפון</string>
+    <string name="login_send_phone">שלח מספר</string>
+    <string name="code">קוד</string>
+    <string name="login_send_code">שלח קוד</string>
+    <string name="password_2fa">סיסמה (2FA)</string>
+    <string name="login_send_password">שלח סיסמה</string>
+
+    <string name="chats_title">צ׳אטים</string>
+    <string name="messages_title">הודעות</string>
+
+    <string name="details_title">פרטים</string>
+    <string name="btn_details">פרטים</string>
+    <string name="btn_send">שלח</string>
+    <string name="btn_clear_temp">נקה זמניים</string>
+
+    <string name="blur_add">הוסף טשטוש</string>
+    <string name="blur_erase">מחק טשטוש</string>
+    <string name="blur_undo">Undo</string>
+    <string name="blur_clear_all">נקה הכל</string>
+
+    <string name="settings_title">הגדרות</string>
+    <string name="logo_enable">הוסף לוגו סימוכין</string>
+    <string name="pick_logo">בחר לוגו</string>
+    <string name="preset_position">מיקום (Preset)</string>
+    <string name="advanced_position">מתקדם</string>
+    <string name="x_percent">X%</string>
+    <string name="y_percent">Y%</string>
+    <string name="scale_percent">Scale%</string>
+    <string name="opacity_percent">Opacity%</string>
+    <string name="save">שמור</string>
+
+    <string name="placeholder_no_thumb">אין תמונה ממוזערת</string>
+    <string name="open_settings">הגדרות</string>
+    <string name="missing_api_credentials">חסרים API_ID / API_HASH. הוסף אותם ב-gradle.properties או בהגדרות (ראה README).</string>
+</resources>
