@@ -1,22 +1,30 @@
 package com.pasiflonet.mobile.ui
 
-import androidx.lifecycle.ViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 
-class LoginViewModel : ViewModel() {
-    private val _status = MutableStateFlow("idle")
-    val status: StateFlow<String> = _status
+class LoginViewModel(app: Application) : AndroidViewModel(app) {
+    private val graph = AppGraph(app)
+    private val repo = graph.tdRepository
 
-    fun setPhone(phone: String) {
-        _status.value = "phone_set"
+    val status: StateFlow<String> = repo.status
+
+    fun saveApi(apiId: Int, apiHash: String) = viewModelScope.launch {
+        repo.saveApi(apiId, apiHash)
     }
 
-    fun sendCode(code: String) {
-        _status.value = "code_sent"
+    fun sendPhone(phone: String) = viewModelScope.launch {
+        repo.sendPhone(phone)
     }
 
-    fun sendPassword(password: String) {
-        _status.value = "password_sent"
+    fun sendCode(code: String) = viewModelScope.launch {
+        repo.sendCode(code)
+    }
+
+    fun sendPassword(password: String) = viewModelScope.launch {
+        repo.sendPassword(password)
     }
 }

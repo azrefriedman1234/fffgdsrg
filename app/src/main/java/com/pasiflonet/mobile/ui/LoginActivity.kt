@@ -16,10 +16,27 @@ class LoginActivity : AppCompatActivity() {
         b = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(b.root)
 
-        // Placeholder wiring – no assumptions about IDs inside layout
+        b.btnSaveApi.setOnClickListener {
+            val id = b.etApiId.text?.toString()?.trim()?.toIntOrNull() ?: 0
+            val hash = b.etApiHash.text?.toString()?.trim().orEmpty()
+            vm.saveApi(id, hash)
+        }
+
+        b.btnSendPhone.setOnClickListener {
+            vm.sendPhone(b.etPhone.text?.toString()?.trim().orEmpty())
+        }
+
+        b.btnSendCode.setOnClickListener {
+            vm.sendCode(b.etCode.text?.toString()?.trim().orEmpty())
+        }
+
+        b.btnSendPassword.setOnClickListener {
+            vm.sendPassword(b.etPassword.text?.toString()?.trim().orEmpty())
+        }
+
         lifecycleScope.launch {
-            vm.status.collect { _ ->
-                // update UI later
+            vm.status.collect { s ->
+                b.tvStatus.text = "סטטוס: $s"
             }
         }
     }
