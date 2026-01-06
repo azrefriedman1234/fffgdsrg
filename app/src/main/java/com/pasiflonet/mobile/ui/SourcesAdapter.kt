@@ -7,15 +7,9 @@ import com.pasiflonet.mobile.databinding.RowSourceBinding
 import com.pasiflonet.mobile.td.SourceRow
 
 class SourcesAdapter(
-    private val onClick: (Long) -> Unit
+    private var items: List<SourceRow>,
+    private val onClick: (SourceRow) -> Unit
 ) : RecyclerView.Adapter<SourcesAdapter.VH>() {
-
-    private var items: List<SourceRow> = emptyList()
-
-    fun submit(list: List<SourceRow>) {
-        items = list
-        notifyDataSetChanged()
-    }
 
     class VH(val b: RowSourceBinding) : RecyclerView.ViewHolder(b.root)
 
@@ -27,9 +21,14 @@ class SourcesAdapter(
     override fun getItemCount(): Int = items.size
 
     override fun onBindViewHolder(holder: VH, position: Int) {
-        val it = items[position]
-        holder.b.tvTitle.text = it.title
-        holder.b.tvSub.text = it.lastMessageSummary
-        holder.b.root.setOnClickListener { onClick(it.chatId) }
+        val row = items[position]
+        holder.b.tvTitle.text = row.title
+        holder.b.tvSubtitle.text = row.subtitle
+        holder.b.root.setOnClickListener { onClick(row) }
+    }
+
+    fun submit(newItems: List<SourceRow>) {
+        items = newItems
+        notifyDataSetChanged()
     }
 }
