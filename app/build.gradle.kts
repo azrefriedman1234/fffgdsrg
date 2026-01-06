@@ -20,7 +20,7 @@ android {
         val apiId = (project.findProperty("TELEGRAM_API_ID") as String?) ?: "0"
         val apiHash = (project.findProperty("TELEGRAM_API_HASH") as String?) ?: ""
         buildConfigField("int", "TELEGRAM_API_ID", apiId)
-        buildConfigField("String", "TELEGRAM_API_HASH", ""$apiHash"")
+        buildConfigField("String", "TELEGRAM_API_HASH", "\"$apiHash\"")
     }
 
     buildTypes {
