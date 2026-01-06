@@ -11,6 +11,8 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // בשביל TDLib AAR מקומי
+        flatDir { dirs("app/libs") }
     }
 }
 

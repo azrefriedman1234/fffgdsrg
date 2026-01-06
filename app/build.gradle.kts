@@ -57,8 +57,6 @@ android {
 }
 
 // REQUIRED by user: local AAR in app/libs + flatDir.
-repositories {
-    flatDir { dirs("libs") }
 }
 
 dependencies {
