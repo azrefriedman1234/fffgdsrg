@@ -2,9 +2,7 @@ package com.pasiflonet.mobile.td
 
 import android.content.Context
 import android.net.Uri
-import android.provider.OpenableColumns
 import android.util.Log
-import com.pasiflonet.mobile.data.PreferencesRepo
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import org.drinkless.tdlib.TdApi
@@ -13,19 +11,19 @@ import java.io.File
 data class ChatUi(val id: Long, val title: String, val lastMessage: String)
 data class MessageUi(val id: Long, val sender: String, val text: String, val date: Long)
 
-class TdRepository(
-    private val ctx: Context,
-    private val prefs: PreferencesRepo
-) {
-
-    private val apiId: Int get() = prefs.getApiId()
-    private val apiHash: String get() = prefs.getApiHash()
+/**
+ * Minimal repository that COMPILES and provides the API that UI/Workers expect.
+ * Later we can implement real TDLib logic (get chats/messages, download files, etc.).
+ */
+class TdRepository(private val ctx: Context) {
 
     private val td: TdClient by lazy {
+        val apiId = BuildConfig.TELEGRAM_API_ID
+        val apiHash = BuildConfig.TELEGRAM_API_HASH
+
         TdClient(ctx, apiId, apiHash).also { client ->
             client.onUpdate = { obj -> handleUpdate(obj) }
 
-            // folders
             val dbDir = File(ctx.filesDir, "tdlib-db").absolutePath
             val filesDir = File(ctx.filesDir, "tdlib-files").absolutePath
             File(dbDir).mkdirs()
@@ -35,35 +33,48 @@ class TdRepository(
         }
     }
 
-    private val _authState = MutableStateFlow("UNKNOWN")
-    val authState: StateFlow<String> = _authState
+    // UI expects these
+    private val _chats = MutableStateFlow<List<ChatUi>>(emptyList())
+    val chats: StateFlow<List<ChatUi>> = _chats
+
+    private val _messages = MutableStateFlow<List<MessageUi>>(emptyList())
+    val messages: StateFlow<List<MessageUi>> = _messages
 
     private fun handleUpdate(obj: TdApi.Object) {
-        when (obj) {
-            is TdApi.UpdateAuthorizationState -> {
-                val s = obj.authorizationState
-                _authState.value = s.javaClass.simpleName
-            }
+        // Placeholder: later parse UpdateNewMessage / UpdateChatLastMessage etc.
+        if (obj is TdApi.UpdateAuthorizationState) {
+            Log.d("TDRepo", "AuthState: ${obj.authorizationState.javaClass.simpleName}")
         }
     }
 
-    fun setPhone(phone: String) {
-        td.setPhoneNumber(phone) { res -> Log.d("TDRepo", "setPhoneNumber => ${res.javaClass.simpleName}") }
+    // ---- UI hooks (placeholders) ----
+
+    fun loadChats() {
+        // Placeholder: later call GetChats/GetChat etc.
+        // Keeping empty list for compile.
     }
 
-    fun sendCode(code: String) {
-        td.checkCode(code) { res -> Log.d("TDRepo", "checkCode => ${res.javaClass.simpleName}") }
+    fun loadMessages(chatId: Long) {
+        // Placeholder: later call GetChatHistory.
+        // Keeping empty list for compile.
     }
 
-    fun sendPassword(pass: String) {
-        td.checkPassword(pass) { res -> Log.d("TDRepo", "checkPassword => ${res.javaClass.simpleName}") }
+    fun requestThumbnailDownload(fileId: Int, onDone: (Boolean) -> Unit = {}) {
+        // Placeholder. In real implementation: DownloadFile(fileId, ...)
+        onDone(false)
     }
 
-    fun logout() {
-        td.logout()
+    fun requestFileDownload(fileId: Int, onDone: (Boolean) -> Unit = {}) {
+        // Placeholder. In real implementation: DownloadFile(fileId, ...)
+        onDone(false)
     }
 
-    // -------- sending --------
+    fun getFileLocalPath(fileId: Int): String? {
+        // Placeholder. In real implementation: keep map from fileId->localPath via updates.
+        return null
+    }
+
+    // ---- send helpers ----
 
     fun sendTextMessage(chatId: Long, text: String, onDone: (Boolean) -> Unit = {}) {
         val content = TdApi.InputMessageText(
@@ -71,27 +82,25 @@ class TdRepository(
             null,
             false
         )
-
-        // TDLib חדש: SendMessage(chatId, messageTopic, replyTo, options, replyMarkup, content)
         val req = TdApi.SendMessage(chatId, null, null, null, null, content)
-        td.send(req) { res ->
-            onDone(res is TdApi.Message)
-        }
+        td.send(req) { res -> onDone(res is TdApi.Message) }
     }
 
-    fun sendMedia(chatId: Long, uri: Uri, caption: String?, onDone: (Boolean) -> Unit = {}) {
-        val path = copyUriToCache(uri) ?: run {
-            onDone(false); return
+    fun sendFileToChat(chatId: Long, filePath: String, caption: String? = null, onDone: (Boolean) -> Unit = {}) {
+        val f = File(filePath)
+        if (!f.exists()) {
+            onDone(false)
+            return
         }
 
-        val inputFile = TdApi.InputFileLocal(path)
+        val inputFile = TdApi.InputFileLocal(f.absolutePath)
         val formatted = TdApi.FormattedText(caption ?: "", null)
 
-        val mime = ctx.contentResolver.getType(uri) ?: ""
+        val lower = f.name.lowercase()
+        val isVideo = lower.endsWith(".mp4") || lower.endsWith(".mkv") || lower.endsWith(".mov") || lower.endsWith(".webm")
+
         val content: TdApi.InputMessageContent =
-            if (mime.startsWith("video")) {
-                // TDLib 1.8.56 ctor:
-                // InputMessageVideo(inputFile, thumbnail, addedStickerFile, duration, addedStickerFileIds, width, height, supportsStreaming, caption, hasSpoiler, selfDestructType, showCaptionAboveMedia)
+            if (isVideo) {
                 TdApi.InputMessageVideo(
                     inputFile,
                     null,
@@ -108,8 +117,6 @@ class TdRepository(
                     false
                 )
             } else {
-                // TDLib 1.8.56 ctor:
-                // InputMessagePhoto(inputFile, thumbnail, addedStickerFileIds, width, height, caption, hasSpoiler, selfDestructType, showCaptionAboveMedia)
                 TdApi.InputMessagePhoto(
                     inputFile,
                     null,
@@ -124,15 +131,18 @@ class TdRepository(
             }
 
         val req = TdApi.SendMessage(chatId, null, null, null, null, content)
-        td.send(req) { res ->
-            onDone(res is TdApi.Message)
-        }
+        td.send(req) { res -> onDone(res is TdApi.Message) }
+    }
+
+    fun sendMedia(chatId: Long, uri: Uri, caption: String?, onDone: (Boolean) -> Unit = {}) {
+        // Minimal: copy uri->cache then send
+        val path = copyUriToCache(uri) ?: run { onDone(false); return }
+        sendFileToChat(chatId, path, caption, onDone)
     }
 
     private fun copyUriToCache(uri: Uri): String? {
         return try {
-            val name = queryDisplayName(uri) ?: "upload.bin"
-            val outFile = File(ctx.cacheDir, name)
+            val outFile = File(ctx.cacheDir, "upload_${System.currentTimeMillis()}")
             ctx.contentResolver.openInputStream(uri)?.use { inp ->
                 outFile.outputStream().use { out -> inp.copyTo(out) }
             } ?: return null
@@ -141,30 +151,5 @@ class TdRepository(
             Log.e("TDRepo", "copyUriToCache failed", t)
             null
         }
-    }
-
-    private fun queryDisplayName(uri: Uri): String? {
-        return try {
-            ctx.contentResolver.query(uri, null, null, null, null)?.use { c ->
-                val idx = c.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                if (idx >= 0 && c.moveToFirst()) c.getString(idx) else null
-            }
-        } catch (_: Throwable) {
-            null
-        }
-    }
-
-    // -------- thumbnails helpers (typed lambdas to avoid inference issues in CI) --------
-
-    fun bestPhotoFileId(p: TdApi.Photo?): Int? {
-        val sizes = p?.sizes ?: return null
-
-        val best = sizes.maxByOrNull { ps: TdApi.PhotoSize ->
-            ps.photo?.expectedSize ?: 0
-        } ?: sizes.minByOrNull { ps: TdApi.PhotoSize ->
-            ps.photo?.expectedSize ?: Int.MAX_VALUE
-        }
-
-        return best?.photo?.id
     }
 }
