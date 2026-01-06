@@ -18,7 +18,7 @@ class TdClient(
         Client.ExceptionHandler { e -> Log.e("TdClient", "TDLib fatal: ${e.message}", e) }
     )
 
-    // NOTE: In td-1.8.56.aar, TdApi.Function is generic -> use Function<*>
+    // NOTE: In td-1.8.56.aar, TdApi.Function<out TdApi.Object> is generic -> use Function<*>
     fun send(query: TdApi.Function<*>, cb: (TdApi.Object) -> Unit = {}) {
         client.send(query, Client.ResultHandler { obj -> cb(obj) })
     }

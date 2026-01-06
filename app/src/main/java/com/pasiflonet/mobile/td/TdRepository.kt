@@ -79,7 +79,7 @@ class TdRepository(
         _status.value = "Password sent"
     }
 
-    private suspend fun <T : TdApi.Object> await(function: TdApi.Function, expected: Class<T>): T {
+    private suspend fun <T : TdApi.Object> await(function: TdApi.Function<out TdApi.Object>, expected: Class<T>): T {
         val c = ensureClient()
         return suspendCancellableCoroutine { cont ->
             c.send(function) { obj ->
