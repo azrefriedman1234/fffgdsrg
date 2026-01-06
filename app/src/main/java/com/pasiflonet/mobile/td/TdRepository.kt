@@ -1,4 +1,5 @@
 package com.pasiflonet.mobile.td
+import com.pasiflonet.mobile.BuildConfig
 
 import android.content.Context
 import android.net.Uri

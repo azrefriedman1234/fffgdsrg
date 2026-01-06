@@ -1,28 +1,22 @@
 package com.pasiflonet.mobile.ui
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.viewModelScope
-import com.pasiflonet.mobile.td.TdRepository
+import androidx.lifecycle.ViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
 
-class LoginViewModel(app: Application) : AndroidViewModel(app) {
-    private val repo: TdRepository = AppGraph.tdRepository(app)
-    val authState: StateFlow<String> = repo.authState
+class LoginViewModel : ViewModel() {
+    private val _status = MutableStateFlow("idle")
+    val status: StateFlow<String> = _status
 
-    fun sendPhone(phone: String) {
-        if (phone.isBlank()) return
-        repo.setPhone(phone)
+    fun setPhone(phone: String) {
+        _status.value = "phone_set"
     }
 
     fun sendCode(code: String) {
-        if (code.isBlank()) return
-        repo.sendCode(code)
+        _status.value = "code_sent"
     }
 
-    fun sendPassword(pass: String) {
-        if (pass.isBlank()) return
-        repo.sendPassword(pass)
+    fun sendPassword(password: String) {
+        _status.value = "password_sent"
     }
 }
