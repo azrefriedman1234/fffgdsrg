@@ -24,20 +24,20 @@ class TdClient(
 
     fun setTdlibParameters(databaseDir: String, filesDir: String) {
         val req = TdApi.SetTdlibParameters(
-            false,                       // useTestDc
-            databaseDir,                 // databaseDirectory
-            filesDir,                    // filesDirectory
-            ByteArray(0),                // databaseEncryptionKey
-            true,                        // useFileDatabase
-            true,                        // useChatInfoDatabase
-            true,                        // useMessageDatabase
-            false,                       // useSecretChats
-            apiId,                       // apiId
-            apiHash,                     // apiHash
-            "en",                        // systemLanguageCode
-            android.os.Build.MODEL,      // deviceModel
-            android.os.Build.VERSION.RELEASE, // systemVersion
-            "1.0"                        // applicationVersion
+            false,
+            databaseDir,
+            filesDir,
+            ByteArray(0),
+            true,
+            true,
+            true,
+            false,
+            apiId,
+            apiHash,
+            "en",
+            android.os.Build.MODEL,
+            android.os.Build.VERSION.RELEASE,
+            "1.0"
         )
 
         send(req) { obj ->
