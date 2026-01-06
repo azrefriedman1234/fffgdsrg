@@ -13,7 +13,10 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         b = ActivityMainBinding.inflate(layoutInflater)
         setContentView(b.root)
-        // Placeholder – UI wiring later
+        
+        // 🔧 ensure Settings button always works (even if ID changes)
+        wireSettingsButton()
+// Placeholder – UI wiring later
     }
 
     private fun wireSettingsButtonAuto() {
@@ -52,6 +55,36 @@ class MainActivity : AppCompatActivity() {
         }
         // Also set activity title (toolbar)
         if (title?.toString()?.trim() == "צאטים") title = "מקורות"
+    }
+
+
+    private fun wireSettingsButton() {
+        val ids = listOf("btnSettings","buttonSettings","ivSettings","imgSettings","settings")
+        val v = ids.firstNotNullOfOrNull { name ->
+            val id = resources.getIdentifier(name, "id", packageName)
+            if (id != 0) findViewById<android.view.View?>(id) else null
+        }
+
+        if (v == null) {
+            android.util.Log.w("MainActivity", "Settings button not found in layout")
+            return
+        }
+
+        // make sure it can receive touches
+        v.isEnabled = true
+        v.isClickable = true
+        v.isFocusable = true
+
+        // Touch debug: אם זה לא מופיע בלוג, יש Overlay
+        v.setOnTouchListener { _, ev ->
+            android.util.Log.d("MainActivity", "Settings touch: ${'$'}{ev.action}")
+            false
+        }
+
+        v.setOnClickListener {
+            android.widget.Toast.makeText(this, "פותח הגדרות…", android.widget.Toast.LENGTH_SHORT).show()
+            startActivity(android.content.Intent(this, SettingsActivity::class.java))
+        }
     }
 
 }
