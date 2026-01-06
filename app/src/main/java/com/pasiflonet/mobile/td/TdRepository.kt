@@ -50,10 +50,15 @@ class TdRepository(
     }
 
     private fun handleAuth(state: TdApi.AuthorizationState) {
-        val s = state.javaClass.simpleName
-        Log.d("TdRepository", "Auth state: $s")
-        _status.value = "Auth: $s"
-    }
+      val s = state.javaClass.simpleName
+      Log.d("TdRepository", "Auth state: $s")
+      _status.value = "Auth: $s"
+
+      if (state is TdApi.AuthorizationStateReady) {
+          _loggedIn.value = true
+          _status.value = "✅ מחובר"
+      }
+  }
 
     suspend fun saveApi(apiId: Int, apiHash: String) {
         prefs.setApi(apiId, apiHash)
