@@ -9,14 +9,18 @@
         android:id="@+id/tvTitle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textSize="15sp"
-        android:textStyle="bold" />
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:maxLines="1"
+        android:ellipsize="end" />
 
     <TextView
-        android:id="@+id/tvSub"
+        android:id="@+id/tvSubtitle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:textSize="12sp"
-        android:alpha="0.85"
-        android:paddingTop="2dp" />
+        android:alpha="0.8"
+        android:maxLines="1"
+        android:ellipsize="end" />
+
 </LinearLayout>
