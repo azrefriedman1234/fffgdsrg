@@ -7,13 +7,12 @@ pluginManagement {
 }
 
 dependencyResolutionManagement {
-    // IMPORTANT: allow app module to declare flatDir("libs") for the local TDLib AAR.
-    repositoriesMode.set(RepositoriesMode.PREFER_PROJECT)
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         google()
         mavenCentral()
     }
 }
 
-rootProject.name = "PasiflonetMobile"
+rootProject.name = "fffgdsrg"
 include(":app")
