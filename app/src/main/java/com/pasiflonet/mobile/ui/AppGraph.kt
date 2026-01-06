@@ -4,7 +4,19 @@ import android.content.Context
 import com.pasiflonet.mobile.data.AppPrefs
 import com.pasiflonet.mobile.td.TdRepository
 
-class AppGraph(ctx: Context) {
-    val prefs = AppPrefs(ctx.applicationContext)
-    val tdRepository = TdRepository(ctx.applicationContext, prefs)
+object AppGraph {
+    @Volatile private var prefsInst: AppPrefs? = null
+    @Volatile private var repoInst: TdRepository? = null
+
+    fun prefs(ctx: Context): AppPrefs {
+        return prefsInst ?: synchronized(this) {
+            prefsInst ?: AppPrefs(ctx.applicationContext).also { prefsInst = it }
+        }
+    }
+
+    fun tdRepository(ctx: Context): TdRepository {
+        return repoInst ?: synchronized(this) {
+            repoInst ?: TdRepository(ctx.applicationContext, prefs(ctx)).also { repoInst = it }
+        }
+    }
 }
